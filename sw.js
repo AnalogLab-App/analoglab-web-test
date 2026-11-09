@@ -1,5 +1,5 @@
 // Офлайн-кеш тестовой страницы: сначала сеть (чтобы обновления доходили), без сети — из кеша.
-const CACHE = 'al-webtest-v1';
+const CACHE = 'al-webtest-v2';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png', './icons/apple-touch-icon.png', './icons/favicon-64.png'];
 
 self.addEventListener('install', e => {
