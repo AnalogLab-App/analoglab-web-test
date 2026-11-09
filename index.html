@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#141816">
 <title>Тест таймера Analog.Lab</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&family=Martian+Mono:wght@400;500&display=swap">
@@ -21,6 +20,7 @@
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#121614; --surface:#1C2220; --ink:#EEF1ED; --muted:#A3ABA6; --line:#2E3532; --accent-ink:#F0B400; --ok:#8FD3A3; --ok-bg:#16301F; --bad:#F2A49C; --bad-bg:#3A1714; color-scheme:dark } }
 :root[data-theme="dark"]{ --bg:#121614; --surface:#1C2220; --ink:#EEF1ED; --muted:#A3ABA6; --line:#2E3532; --accent-ink:#F0B400; --ok:#8FD3A3; --ok-bg:#16301F; --bad:#F2A49C; --bad-bg:#3A1714; color-scheme:dark }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 48px}
 .wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
