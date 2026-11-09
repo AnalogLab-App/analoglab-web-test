@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141816">
+<title>Тест таймера Analog.Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column like the app: timer card, controls, checks list and diagnostics log; red mode covers the screen */
+:root{
+  --bg:#EEF1EE; --surface:#FFFFFF; --ink:#141816; --muted:#4F5752; --line:#D6DCD7; --accent:#F0B400; --accent-ink:#6B4E00;
+  --ok:#24603A; --ok-bg:#E3F1E6; --bad:#9A2C24; --bad-bg:#FBE2DF;
+  --red:#FF0000; --red-fill:#3D0000; --red-line:#5C0000; --black:#000000;
+  --f-body:'Golos Text', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --f-mono:'Martian Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#121614; --surface:#1C2220; --ink:#EEF1ED; --muted:#A3ABA6; --line:#2E3532; --accent-ink:#F0B400; --ok:#8FD3A3; --ok-bg:#16301F; --bad:#F2A49C; --bad-bg:#3A1714; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#121614; --surface:#1C2220; --ink:#EEF1ED; --muted:#A3ABA6; --line:#2E3532; --accent-ink:#F0B400; --ok:#8FD3A3; --ok-bg:#16301F; --bad:#F2A49C; --bad-bg:#3A1714; color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 48px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{margin:0;font-size:28px;font-weight:800;letter-spacing:-.4px;text-wrap:balance}
+h2{margin:0;font-size:16px;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted);font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.seg{display:flex;gap:4px;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;width:fit-content;flex-wrap:wrap}
+.seg button{border:0;background:transparent;color:var(--ink);font:600 14px var(--f-body);padding:8px 12px;border-radius:9px;cursor:pointer;min-height:40px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.btn{border:0;border-radius:14px;min-height:52px;padding:0 16px;font:700 16px var(--f-body);cursor:pointer;background:var(--accent);color:#141413}
+.btn.out{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.btn:disabled{opacity:.45;cursor:default}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row > .btn{flex:1}
+.step{font-weight:700;font-size:18px}
+.big{font-family:var(--f-mono);font-size:64px;line-height:1;letter-spacing:-3px;text-align:center;font-variant-numeric:tabular-nums;padding:6px 0}
+.cue{min-height:28px;text-align:center;font-weight:700;color:var(--accent-ink)}
+.steps{display:flex;flex-direction:column;gap:4px;font-size:14px}
+.steps div{display:flex;justify-content:space-between;padding:6px 10px;border-radius:10px;background:var(--bg)}
+.steps div.now{outline:2px solid var(--accent)}
+.steps div.done{opacity:.5}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.checks{display:flex;flex-direction:column;gap:8px}
+.check{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;font-size:14px}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}
+.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.wait{background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.ask{display:flex;gap:6px}
+.ask button{border:1.5px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;font:600 13px var(--f-body);padding:6px 10px;min-height:38px;cursor:pointer}
+.ask button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#log{font-family:var(--f-mono);font-size:11.5px;line-height:1.55;white-space:pre-wrap;background:var(--bg);border-radius:12px;padding:10px;max-height:240px;overflow:auto;margin:0}
+.tip{background:var(--bg);border-radius:12px;padding:10px 12px;font-size:14px}
+
+/* red mode */
+#red{position:fixed;inset:0;background:var(--black);color:var(--red);z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  padding:max(20px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));font-family:var(--f-body)}
+#red .rbig{font-family:var(--f-mono);font-size:min(28vw,140px);letter-spacing:-6px;line-height:1;font-variant-numeric:tabular-nums}
+#red .rstep{font-size:22px;font-weight:800}
+#red .rcue{font-size:18px;font-weight:700;min-height:26px;text-align:center}
+#red button{position:absolute;top:max(14px, env(safe-area-inset-top, 0px));left:max(14px, env(safe-area-inset-left, 0px));background:transparent;color:var(--red);border:1.5px solid var(--red-line);border-radius:12px;min-height:44px;padding:0 14px;font:700 15px var(--f-body);cursor:pointer}
+#red .rwait{background:var(--red-fill);border:1.5px solid var(--red);border-radius:14px;padding:14px 18px;font-weight:700;font-size:16px;cursor:pointer;position:static;color:var(--red)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1 id="t-title">Тест таймера в браузере</h1>
+    <p class="muted" id="t-lead">Проверка для веб-версии Analog.Lab: держится ли экран, слышны ли звук и голос, не сбивается ли отсчёт. Пройди сценарий и нажми «Скопировать отчёт».</p>
+    <div class="seg" role="group" aria-label="Язык">
+      <button type="button" data-lang="ru" aria-pressed="true">Русский</button>
+      <button type="button" data-lang="en" aria-pressed="false">English</button>
+    </div>
+  </header>
+
+  <section class="card" aria-labelledby="h-timer">
+    <h2 id="h-timer" data-t="process">Процесс</h2>
+    <div class="seg" role="group" aria-label="Процесс">
+      <button type="button" data-preset="demo" aria-pressed="true" data-t="demo">Демо, 2 минуты</button>
+      <button type="button" data-preset="real" aria-pressed="false" data-t="real">HP5+ в ID-11, 30 минут</button>
+    </div>
+    <div class="step" id="stepName">—</div>
+    <div class="big" id="cd" aria-live="off">0:00</div>
+    <div class="cue" id="cue" aria-live="polite"></div>
+    <div class="steps" id="steps"></div>
+    <div class="row">
+      <button class="btn" id="start" type="button" data-t="start">Старт</button>
+      <button class="btn out" id="stop" type="button" data-t="stop" disabled>Стоп</button>
+    </div>
+    <div class="row">
+      <button class="btn out" id="redBtn" type="button" data-t="redmode">Красный режим</button>
+      <button class="btn out" id="soundTest" type="button" data-t="soundtest">Проверить звук и голос</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="h-checks">
+    <h2 id="h-checks" data-t="checks">Что проверить</h2>
+    <div class="tip" id="t-howto">1. Нажми «Старт». 2. Положи телефон и не трогай 1 минуту: экран не должен погаснуть, голос должен говорить «агитируй». 3. Сверни браузер на 20 секунд и вернись. 4. Включи беззвучный режим (на iPhone — переключатель сбоку) и нажми «Проверить звук и голос». 5. Попробуй «Красный режим».</div>
+    <div class="checks" id="auto"></div>
+    <div class="checks" id="manual"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-log">
+    <h2 id="h-log" data-t="report">Отчёт</h2>
+    <pre id="log"></pre>
+    <div class="row">
+      <button class="btn" id="copy" type="button" data-t="copy">Скопировать отчёт</button>
+    </div>
+    <p class="muted" id="copied" aria-live="polite"></p>
+  </section>
+</div>
+
+<div id="red" hidden>
+  <button type="button" id="redExit" data-t="exit">‹ Выйти</button>
+  <div class="rstep" id="rStep">—</div>
+  <div class="rbig" id="rcd">0:00</div>
+  <div class="rcue" id="rCue"></div>
+  <div id="rWaitBox"></div>
+</div>
+
+<script>
+(function(){
+let LANG = 'ru';
+const T = {
+  ru:{title:'Тест таймера в браузере', lead:'Проверка для веб-версии Analog.Lab: держится ли экран, слышны ли звук и голос, не сбивается ли отсчёт. Пройди сценарий и нажми «Скопировать отчёт».',
+    process:'Процесс', demo:'Демо, 2 минуты', real:'HP5+ в ID-11, 30 минут', start:'Старт', stop:'Стоп', redmode:'Красный режим', soundtest:'Проверить звук и голос',
+    checks:'Что проверить', report:'Отчёт', copy:'Скопировать отчёт', exit:'‹ Выйти', copied:'Скопировано. Пришли этот текст в чат.', copyFail:'Не получилось скопировать — выдели текст отчёта вручную.',
+    howto:'1. Нажми «Старт». 2. Положи телефон и не трогай 1 минуту: экран не должен погаснуть, голос должен говорить «агитируй». 3. Сверни браузер на 20 секунд и вернись. 4. Включи беззвучный режим (на iPhone — переключатель сбоку) и нажми «Проверить звук и голос». 5. Попробуй «Красный режим».',
+    dev:'Проявитель', stopb:'Стоп', fix:'Фиксаж', wash:'Промывка', wet:'Смачиватель',
+    agitate:'Агитируй', enough:'Хватит', soon:'Через 10 секунд слив', drain:'Сливай', pour:'Залей «{s}» и нажми', poured:'Залил — старт', finished:'Готово. Проявка закончена.',
+    a_wake:'Экран не гаснет (Wake Lock)', a_speech:'Голос (синтез речи)', a_voice:'Голос на этом языке', a_audio:'Звук разблокирован', a_pwa:'Открыто как приложение (на экране «Домой»)', a_session:'Режим звука «игнорировать беззвучный» (iPhone)',
+    m_screen:'Экран не погас за минуту', m_voice:'Голос слышно', m_beep1:'Сигнал 1 слышно', m_beep2:'Сигнал 2 слышно', m_silent:'Слышно в беззвучном режиме', m_back:'После сворачивания время верное', m_red:'Красный режим без белого и без строки браузера',
+    yes:'Да', no:'Нет', ok:'есть', bad:'нет', unknown:'?', voiceTest:'Проверка голоса. Агитируй.'},
+  en:{title:'Browser timer test', lead:'A check for the Analog.Lab web version: does the screen stay on, can you hear sounds and voice, does the countdown stay accurate. Go through the steps and tap “Copy report”.',
+    process:'Process', demo:'Demo, 2 minutes', real:'HP5+ in ID-11, 30 minutes', start:'Start', stop:'Stop', redmode:'Red mode', soundtest:'Test sound and voice',
+    checks:'What to check', report:'Report', copy:'Copy report', exit:'‹ Exit', copied:'Copied. Paste this text into the chat.', copyFail:'Copy failed — select the report text manually.',
+    howto:'1. Tap Start. 2. Put the phone down for 1 minute: the screen should stay on and the voice should say “agitate”. 3. Switch away from the browser for 20 seconds and come back. 4. Turn on silent mode (the side switch on iPhone) and tap “Test sound and voice”. 5. Try Red mode.',
+    dev:'Developer', stopb:'Stop', fix:'Fixer', wash:'Wash', wet:'Wetting agent',
+    agitate:'Agitate', enough:'Stop agitating', soon:'Drain in 10 seconds', drain:'Drain', pour:'Pour “{s}” and tap', poured:'Poured — start', finished:'Done. Development finished.',
+    a_wake:'Screen stays on (Wake Lock)', a_speech:'Voice (speech synthesis)', a_voice:'Voice in this language', a_audio:'Sound unlocked', a_pwa:'Opened as an app (Home Screen)', a_session:'Audio session ignores silent switch (iPhone)',
+    m_screen:'Screen stayed on for a minute', m_voice:'Voice is audible', m_beep1:'Beep 1 is audible', m_beep2:'Beep 2 is audible', m_silent:'Audible in silent mode', m_back:'Time correct after switching away', m_red:'Red mode without white and browser bar',
+    yes:'Yes', no:'No', ok:'yes', bad:'no', unknown:'?', voiceTest:'Voice test. Agitate.'}
+};
+const t = k => (T[LANG][k] ?? k);
+
+/* ---------- процессы ---------- */
+const PRESETS = {
+  demo: () => [
+    {k:'dev', dur:60, agit:{first:10, every:20, len:5}},
+    {k:'stopb', dur:20, agit:{first:20, every:0, len:0}},
+    {k:'fix', dur:40, agit:{first:10, every:15, len:5}}
+  ],
+  real: () => [
+    {k:'dev', dur:780, agit:{first:30, every:60, len:10}},
+    {k:'stopb', dur:60, agit:{first:60, every:0, len:0}},
+    {k:'fix', dur:300, agit:{first:10, every:60, len:10}},
+    {k:'wash', dur:600, agit:null},
+    {k:'wet', dur:60, agit:null}
+  ]
+};
+let preset = 'demo';
+let steps = PRESETS.demo();
+
+/* ---------- диагностика ---------- */
+const LOG = [];
+const t0 = Date.now();
+function log(msg){ const s = ((Date.now() - t0)/1000).toFixed(1).padStart(6); LOG.push(`[${s} с] ${msg}`); renderLog(); }
+const state = { wake:'wait', speech:'wait', voice:'wait', audio:'wait', pwa:'wait', session:'wait', manual:{} };
+function renderLog(){
+  const head = [
+    'Analog.Lab — тест таймера в браузере',
+    'Браузер: ' + navigator.userAgent,
+    'Язык страницы: ' + LANG + ' · экран ' + screen.width + '×' + screen.height + ' · dpr ' + (window.devicePixelRatio||1),
+    'Автопроверки: wake=' + state.wake + ', speech=' + state.speech + ', voice=' + state.voice + ', audio=' + state.audio + ', pwa=' + state.pwa + ', audioSession=' + state.session,
+    'Ответы: ' + (Object.keys(state.manual).length ? Object.entries(state.manual).map(([k,v]) => k + '=' + v).join(', ') : '—'),
+    '---'
+  ];
+  document.getElementById('log').textContent = head.concat(LOG.slice(-60)).join('\n');
+}
+function pill(v){ return v === 'ok' ? `<span class="pill ok">${t('ok')}</span>` : v === 'bad' ? `<span class="pill bad">${t('bad')}</span>` : `<span class="pill wait">${t('unknown')}</span>`; }
+function renderChecks(){
+  const A = [['a_wake','wake'],['a_speech','speech'],['a_voice','voice'],['a_audio','audio'],['a_pwa','pwa'],['a_session','session']];
+  document.getElementById('auto').innerHTML = A.map(([l,k]) => `<div class="check"><span>${t(l)}</span>${pill(state[k])}</div>`).join('');
+  const M = ['m_screen','m_voice','m_beep1','m_beep2','m_silent','m_back','m_red'];
+  document.getElementById('manual').innerHTML = M.map(k => `<div class="check"><span>${t(k)}</span><div class="ask" role="group" aria-label="${t(k)}">
+    <button type="button" data-q="${k}" data-v="yes" aria-pressed="${state.manual[k]==='yes'}">${t('yes')}</button>
+    <button type="button" data-q="${k}" data-v="no" aria-pressed="${state.manual[k]==='no'}">${t('no')}</button></div></div>`).join('');
+  renderLog();
+}
+document.getElementById('manual').addEventListener('click', e => {
+  const b = e.target.closest('button[data-q]'); if (!b) return;
+  state.manual[b.dataset.q] = b.dataset.v; log('Ответ: ' + b.dataset.q + ' = ' + b.dataset.v); renderChecks();
+});
+
+state.pwa = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone ? 'ok' : 'bad';
+state.speech = 'speechSynthesis' in window ? 'ok' : 'bad';
+
+/* ---------- звук ---------- */
+let ac = null;
+function unlockAudio(){
+  try {
+    if (navigator.audioSession) { try { navigator.audioSession.type = 'playback'; state.session = 'ok'; } catch(e){ state.session = 'bad'; } } else state.session = 'bad';
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    state.audio = 'ok';
+  } catch(e){ state.audio = 'bad'; log('Звук: ошибка ' + e.message); }
+  renderChecks();
+}
+function beepWA(f=880, ms=180){ try{ if(!ac) return; const o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; g.gain.setValueAtTime(0.15, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + ms/1000); o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + ms/1000 + 0.02); }catch(e){} }
+// сигнал 2 — через <audio> с готовым WAV (на iPhone ведёт себя иначе, чем Web Audio)
+function makeWav(f=660, ms=220){ const sr = 22050, n = Math.floor(sr*ms/1000), b = new ArrayBuffer(44 + n*2), v = new DataView(b);
+  const w = (o,s) => { for (let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4, 36+n*2, true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,n*2,true);
+  for (let i=0;i<n;i++){ const env = Math.min(1, (n-i)/(n*0.3)); v.setInt16(44+i*2, Math.sin(2*Math.PI*f*i/sr)*0.4*env*32767, true); }
+  return URL.createObjectURL(new Blob([b], {type:'audio/wav'})); }
+const wavUrl = makeWav();
+const audioEl = new Audio(wavUrl); audioEl.preload = 'auto';
+function beepEl(){ try{ audioEl.currentTime = 0; const p = audioEl.play(); if (p) p.catch(e => log('Сигнал 2: ' + e.message)); }catch(e){} }
+
+/* ---------- голос ---------- */
+function pickVoice(){
+  if (!('speechSynthesis' in window)) return null;
+  const vs = speechSynthesis.getVoices(); const want = LANG === 'ru' ? 'ru' : 'en';
+  const v = vs.find(x => x.lang && x.lang.toLowerCase().startsWith(want));
+  state.voice = vs.length ? (v ? 'ok' : 'bad') : 'wait';
+  return v || null;
+}
+if ('speechSynthesis' in window){ speechSynthesis.onvoiceschanged = () => { pickVoice(); log('Голоса загружены: ' + speechSynthesis.getVoices().length + (state.voice === 'ok' ? ', есть голос ' + LANG : ', нет голоса ' + LANG)); renderChecks(); }; pickVoice(); }
+function say(text){
+  if (!('speechSynthesis' in window)) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); const v = pickVoice(); if (v) u.voice = v; u.lang = LANG === 'ru' ? 'ru-RU' : 'en-US'; u.rate = 1; speechSynthesis.speak(u); } catch(e){ log('Голос: ошибка ' + e.message); }
+}
+function cue(text, f){ beepWA(f||880); say(text); document.getElementById('cue').textContent = text; document.getElementById('rCue').textContent = text; log('Сигнал: ' + text + (document.hidden ? ' (страница скрыта!)' : '')); }
+
+/* ---------- удержание экрана ---------- */
+let wakeLock = null;
+async function requestWake(){
+  if (!('wakeLock' in navigator)) { state.wake = 'bad'; log('Wake Lock: не поддерживается'); renderChecks(); return; }
+  try { wakeLock = await navigator.wakeLock.request('screen'); state.wake = 'ok'; log('Wake Lock: включён');
+    wakeLock.addEventListener('release', () => log('Wake Lock: отпущен')); }
+  catch(e){ state.wake = 'bad'; log('Wake Lock: отказ — ' + e.name); }
+  renderChecks();
+}
+function releaseWake(){ try { wakeLock && wakeLock.release(); } catch(e){} wakeLock = null; }
+
+/* ---------- таймер (по часам) ---------- */
+let run = null; // {i, startAt, waiting, fired:Set}
+function fmt(s){ s = Math.max(0, Math.ceil(s)); const m = Math.floor(s/60), r = s % 60; return m + ':' + String(r).padStart(2,'0'); }
+function renderSteps(){
+  document.getElementById('steps').innerHTML = steps.map((s,j) => `<div class="${run && j < run.i ? 'done' : run && j === run.i ? 'now' : ''}"><span>${t(s.k)}</span><span class="mono">${fmt(s.dur)}</span></div>`).join('');
+}
+function agitationWindows(s){
+  if (!s.agit) return [];
+  const w = [[0, s.agit.first]];
+  if (s.agit.every > 0){ for (let x = s.agit.every; x < s.dur - 5; x += s.agit.every) w.push([x, Math.min(x + s.agit.len, s.dur)]); }
+  return w;
+}
+function startStep(i){
+  run.i = i; run.waiting = false; run.startAt = Date.now(); run.fired = new Set();
+  const s = steps[i];
+  document.getElementById('stepName').textContent = t(s.k); document.getElementById('rStep').textContent = t(s.k);
+  document.getElementById('rWaitBox').innerHTML = '';
+  renderSteps(); log('Шаг ' + (i+1) + ': ' + t(s.k) + ', ' + fmt(s.dur));
+}
+function tick(){
+  if (!run || run.waiting) return;
+  const s = steps[run.i], el = (Date.now() - run.startAt)/1000, left = s.dur - el;
+  document.getElementById('cd').textContent = fmt(left); document.getElementById('rcd').textContent = fmt(left);
+  agitationWindows(s).forEach(([a,b], k) => {
+    if (el >= a && !run.fired.has('a'+k)) { run.fired.add('a'+k); if (el - a < 3) cue(t('agitate'), 880); else log('Пропущен сигнал «агитируй» на ' + a + ' с (страница спала ' + (el-a).toFixed(1) + ' с)'); }
+    if (b - a >= 3 && b < s.dur && el >= b && !run.fired.has('b'+k)) { run.fired.add('b'+k); if (el - b < 3) cue(t('enough'), 520); }
+  });
+  if (s.dur >= 30 && left <= 10 && !run.fired.has('soon')) { run.fired.add('soon'); if (left > 7) cue(t('soon'), 700); }
+  if (left <= 0){
+    cue(t('drain'), 1100);
+    if (run.i + 1 < steps.length){
+      run.waiting = true; const next = t(steps[run.i+1].k);
+      const msg = t('pour').replace('{s}', next);
+      document.getElementById('cue').textContent = msg; document.getElementById('rCue').textContent = msg;
+      document.getElementById('start').textContent = t('poured'); document.getElementById('start').disabled = false;
+      document.getElementById('rWaitBox').innerHTML = `<button type="button" class="rwait" id="rPoured">${t('poured')}</button>`;
+      document.getElementById('rPoured').addEventListener('click', () => { pouredNext(); });
+    } else { cue(t('finished'), 1300); stopRun(true); }
+  }
+}
+function pouredNext(){ if (!run || !run.waiting) return; document.getElementById('start').disabled = true; document.getElementById('start').textContent = t('start'); startStep(run.i + 1); }
+setInterval(tick, 200);
+
+function startRun(){
+  unlockAudio(); requestWake();
+  steps = PRESETS[preset]();
+  run = {i:0, startAt:Date.now(), waiting:false, fired:new Set()};
+  startStep(0);
+  document.getElementById('start').disabled = true; document.getElementById('stop').disabled = false;
+}
+function stopRun(done){
+  run = null; releaseWake();
+  document.getElementById('start').disabled = false; document.getElementById('start').textContent = t('start');
+  document.getElementById('stop').disabled = true;
+  if (!done) { document.getElementById('cue').textContent = ''; log('Остановлено'); }
+  renderSteps();
+}
+document.getElementById('start').addEventListener('click', () => { if (run && run.waiting) pouredNext(); else startRun(); });
+document.getElementById('stop').addEventListener('click', () => stopRun(false));
+document.getElementById('soundTest').addEventListener('click', () => {
+  unlockAudio(); log('Проверка звука: сигнал 1 (Web Audio), через 0,8 с сигнал 2 (audio), через 1,6 с голос');
+  beepWA(880, 220); setTimeout(beepEl, 800); setTimeout(() => say(t('voiceTest')), 1600);
+});
+
+/* видимость страницы: сколько была скрыта и не сбился ли отсчёт */
+let hiddenAt = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { hiddenAt = Date.now(); log('Страница скрыта'); }
+  else { if (!hiddenAt) return; const d = ((Date.now() - hiddenAt)/1000).toFixed(1); hiddenAt = 0; log('Страница снова видна через ' + d + ' с' + (run ? ' — отсчёт считается от часов, время на экране верное' : ''));
+    if (run && !wakeLock) requestWake(); tick(); }
+});
+
+/* красный режим */
+const red = document.getElementById('red');
+document.getElementById('redBtn').addEventListener('click', async () => {
+  red.hidden = false; log('Красный режим: открыт');
+  try { if (document.documentElement.requestFullscreen) { await document.documentElement.requestFullscreen(); log('Полный экран: да'); } else log('Полный экран: не поддерживается'); }
+  catch(e){ log('Полный экран: отказ — ' + e.name); }
+  if (!wakeLock) requestWake();
+});
+document.getElementById('redExit').addEventListener('click', () => { red.hidden = true; try { document.fullscreenElement && document.exitFullscreen(); } catch(e){} log('Красный режим: закрыт'); });
+
+/* язык и процесс */
+function applyLang(){
+  document.documentElement.lang = LANG;
+  document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
+  document.getElementById('t-title').textContent = t('title'); document.getElementById('t-lead').textContent = t('lead'); document.getElementById('t-howto').textContent = t('howto');
+  if (run && run.waiting) document.getElementById('start').textContent = t('poured');
+  pickVoice(); renderSteps(); renderChecks();
+  if (run) { document.getElementById('stepName').textContent = t(steps[run.i].k); document.getElementById('rStep').textContent = t(steps[run.i].k); }
+}
+document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => { LANG = b.dataset.lang; document.querySelectorAll('[data-lang]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); applyLang(); log('Язык: ' + LANG); }));
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => { if (run) return; preset = b.dataset.preset; steps = PRESETS[preset](); document.querySelectorAll('[data-preset]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); document.getElementById('cd').textContent = fmt(steps[0].dur); document.getElementById('stepName').textContent = t(steps[0].k); renderSteps(); }));
+
+/* копирование отчёта */
+document.getElementById('copy').addEventListener('click', () => {
+  renderLog(); const txt = document.getElementById('log').textContent; const out = document.getElementById('copied');
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(document.getElementById('log')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); out.textContent = t('copyFail'); };
+  try { navigator.clipboard.writeText(txt).then(() => { out.textContent = t('copied'); }, fallback); } catch(e){ fallback(); }
+});
+
+document.getElementById('cd').textContent = fmt(steps[0].dur); document.getElementById('stepName').textContent = t(steps[0].k);
+applyLang(); log('Страница открыта');
+})();
+</script>
+</body>
+</html>
