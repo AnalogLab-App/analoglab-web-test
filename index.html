@@ -3,8 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#141816">
+<meta name="theme-color" content="#141816" id="themeColor">
 <title>Тест таймера Analog.Lab</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="AL веб-тест">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&family=Martian+Mono:wght@400;500&display=swap">
@@ -108,6 +115,13 @@ button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
     <div class="checks" id="manual"></div>
   </section>
 
+  <section class="card" aria-labelledby="h-install">
+    <h2 id="h-install" data-t="install">Установить как приложение</h2>
+    <p class="tip" id="installState"></p>
+    <button class="btn" id="installBtn" type="button" data-t="installBtn" hidden>Установить на телефон</button>
+    <p class="muted" id="installHow"></p>
+  </section>
+
   <section class="card" aria-labelledby="h-log">
     <h2 id="h-log" data-t="report">Отчёт</h2>
     <pre id="log"></pre>
@@ -133,20 +147,26 @@ const T = {
   ru:{title:'Тест таймера в браузере', lead:'Проверка для веб-версии Analog.Lab: держится ли экран, слышны ли звук и голос, не сбивается ли отсчёт. Пройди сценарий и нажми «Скопировать отчёт».',
     process:'Процесс', demo:'Демо, 2 минуты', real:'HP5+ в ID-11, 30 минут', start:'Старт', stop:'Стоп', redmode:'Красный режим', soundtest:'Проверить звук и голос',
     checks:'Что проверить', report:'Отчёт', copy:'Скопировать отчёт', exit:'‹ Выйти', copied:'Скопировано. Пришли этот текст в чат.', copyFail:'Не получилось скопировать — выдели текст отчёта вручную.',
-    howto:'1. Нажми «Старт». 2. Положи телефон и не трогай 1 минуту: экран не должен погаснуть, голос должен говорить «агитируй». 3. Сверни браузер на 20 секунд и вернись. 4. Включи беззвучный режим (на iPhone — переключатель сбоку) и нажми «Проверить звук и голос». 5. Попробуй «Красный режим».',
+    howto:'1. Нажми «Старт». 2. Положи телефон и не трогай 1 минуту: экран не должен погаснуть, голос должен говорить «агитируй». 3. Сверни браузер на 20–30 секунд и вернись. 4. Включи беззвучный режим (на iPhone — переключатель сбоку) и нажми «Проверить звук и голос». 5. Открой «Красный режим». 6. Установи страницу как приложение (блок ниже), открой со значка и повтори 1–5. 7. Включи режим полёта и открой значок ещё раз.',
+    install:'Установить как приложение', installBtn:'Установить на телефон',
+    inst_ok:'Открыто как приложение ({m}). Строки браузера нет.', inst_no:'Сейчас открыто в браузере. Установи — тогда страница откроется со значка, без строки браузера.', inst_tg:'Сейчас открыто внутри Telegram. Установить отсюда нельзя: нажми ⋮ вверху → «Открыть в браузере».',
+    how_android:'Если кнопки нет: в Chrome нажми ⋮ → «Добавить на главный экран» → «Установить».', how_ios:'В Safari нажми «Поделиться» → «На экран „Домой“» → «Добавить».', how_other:'Открой страницу в Chrome (Android) или Safari (iPhone).',
     dev:'Проявитель', stopb:'Стоп', fix:'Фиксаж', wash:'Промывка', wet:'Смачиватель',
     agitate:'Агитируй', enough:'Хватит', soon:'Через 10 секунд слив', drain:'Сливай', pour:'Залей «{s}» и нажми', poured:'Залил — старт', finished:'Готово. Проявка закончена.',
-    a_wake:'Экран не гаснет (Wake Lock)', a_speech:'Голос (синтез речи)', a_voice:'Голос на этом языке', a_audio:'Звук разблокирован', a_pwa:'Открыто как приложение (на экране «Домой»)', a_session:'Режим звука «игнорировать беззвучный» (iPhone)',
-    m_screen:'Экран не погас за минуту', m_voice:'Голос слышно', m_beep1:'Сигнал 1 слышно', m_beep2:'Сигнал 2 слышно', m_silent:'Слышно в беззвучном режиме', m_back:'После сворачивания время верное', m_red:'Красный режим без белого и без строки браузера',
+    a_wake:'Экран не гаснет (Wake Lock)', a_speech:'Голос (синтез речи)', a_voice:'Голос на этом языке', a_audio:'Звук разблокирован', a_pwa:'Открыто как приложение (со значка)', a_offline:'Офлайн-кеш готов', a_session:'Режим звука «игнорировать беззвучный» (iPhone)',
+    m_screen:'Экран не погас за минуту', m_voice:'Голос слышно', m_beep1:'Сигнал 1 слышно', m_beep2:'Сигнал 2 слышно', m_silent:'Слышно в беззвучном режиме', m_back:'После сворачивания время верное', m_red:'Красный режим: нет белого, строки браузера и подсказок', m_offline:'Без интернета открывается со значка',
     yes:'Да', no:'Нет', ok:'есть', bad:'нет', unknown:'?', voiceTest:'Проверка голоса. Агитируй.'},
   en:{title:'Browser timer test', lead:'A check for the Analog.Lab web version: does the screen stay on, can you hear sounds and voice, does the countdown stay accurate. Go through the steps and tap “Copy report”.',
     process:'Process', demo:'Demo, 2 minutes', real:'HP5+ in ID-11, 30 minutes', start:'Start', stop:'Stop', redmode:'Red mode', soundtest:'Test sound and voice',
     checks:'What to check', report:'Report', copy:'Copy report', exit:'‹ Exit', copied:'Copied. Paste this text into the chat.', copyFail:'Copy failed — select the report text manually.',
-    howto:'1. Tap Start. 2. Put the phone down for 1 minute: the screen should stay on and the voice should say “agitate”. 3. Switch away from the browser for 20 seconds and come back. 4. Turn on silent mode (the side switch on iPhone) and tap “Test sound and voice”. 5. Try Red mode.',
+    howto:'1. Tap Start. 2. Put the phone down for 1 minute: the screen should stay on and the voice should say “agitate”. 3. Switch away from the browser for 20–30 seconds and come back. 4. Turn on silent mode (the side switch on iPhone) and tap “Test sound and voice”. 5. Open Red mode. 6. Install the page as an app (section below), open it from the icon and repeat 1–5. 7. Turn on airplane mode and open the icon again.',
+    install:'Install as an app', installBtn:'Install on this phone',
+    inst_ok:'Opened as an app ({m}). No browser bar.', inst_no:'Opened in the browser. Install it to open from an icon, without the browser bar.', inst_tg:'Opened inside Telegram. You can’t install from here: tap ⋮ at the top → “Open in browser”.',
+    how_android:'No button? In Chrome tap ⋮ → “Add to Home screen” → “Install”.', how_ios:'In Safari tap Share → “Add to Home Screen” → “Add”.', how_other:'Open the page in Chrome (Android) or Safari (iPhone).',
     dev:'Developer', stopb:'Stop', fix:'Fixer', wash:'Wash', wet:'Wetting agent',
     agitate:'Agitate', enough:'Stop agitating', soon:'Drain in 10 seconds', drain:'Drain', pour:'Pour “{s}” and tap', poured:'Poured — start', finished:'Done. Development finished.',
-    a_wake:'Screen stays on (Wake Lock)', a_speech:'Voice (speech synthesis)', a_voice:'Voice in this language', a_audio:'Sound unlocked', a_pwa:'Opened as an app (Home Screen)', a_session:'Audio session ignores silent switch (iPhone)',
-    m_screen:'Screen stayed on for a minute', m_voice:'Voice is audible', m_beep1:'Beep 1 is audible', m_beep2:'Beep 2 is audible', m_silent:'Audible in silent mode', m_back:'Time correct after switching away', m_red:'Red mode without white and browser bar',
+    a_wake:'Screen stays on (Wake Lock)', a_speech:'Voice (speech synthesis)', a_voice:'Voice in this language', a_audio:'Sound unlocked', a_pwa:'Opened as an app (from the icon)', a_offline:'Offline cache ready', a_session:'Audio session ignores silent switch (iPhone)',
+    m_screen:'Screen stayed on for a minute', m_voice:'Voice is audible', m_beep1:'Beep 1 is audible', m_beep2:'Beep 2 is audible', m_silent:'Audible in silent mode', m_back:'Time correct after switching away', m_red:'Red mode: no white, no browser bar, no hints', m_offline:'Opens from the icon without internet',
     yes:'Yes', no:'No', ok:'yes', bad:'no', unknown:'?', voiceTest:'Voice test. Agitate.'}
 };
 const t = k => (T[LANG][k] ?? k);
@@ -172,14 +192,24 @@ let steps = PRESETS.demo();
 /* ---------- диагностика ---------- */
 const LOG = [];
 const t0 = Date.now();
+const VERSION = 'v4 (без полного экрана, PWA)';
+const inTelegram = typeof window.TelegramWebviewProxy !== 'undefined' || /Telegram/i.test(navigator.userAgent);
+const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+function displayMode(){
+  const mm = q => window.matchMedia && matchMedia('(display-mode: ' + q + ')').matches;
+  if (mm('fullscreen')) return 'fullscreen';
+  if (mm('standalone') || navigator.standalone) return 'standalone';
+  if (mm('minimal-ui')) return 'minimal-ui';
+  return 'browser';
+}
 function log(msg){ const s = ((Date.now() - t0)/1000).toFixed(1).padStart(6); LOG.push(`[${s} с] ${msg}`); renderLog(); }
-const state = { wake:'wait', speech:'wait', voice:'wait', audio:'wait', pwa:'wait', session:'wait', manual:{} };
+const state = { wake:'wait', speech:'wait', voice:'wait', audio:'wait', pwa:'wait', offline:'wait', session:'wait', manual:{} };
 function renderLog(){
   const head = [
-    'Analog.Lab — тест таймера в браузере',
+    'Analog.Lab — тест таймера в браузере, ' + VERSION,
     'Браузер: ' + navigator.userAgent,
-    'Язык страницы: ' + LANG + ' · экран ' + screen.width + '×' + screen.height + ' · dpr ' + (window.devicePixelRatio||1),
-    'Автопроверки: wake=' + state.wake + ', speech=' + state.speech + ', voice=' + state.voice + ', audio=' + state.audio + ', pwa=' + state.pwa + ', audioSession=' + state.session,
+    'Telegram: ' + (inTelegram ? 'да' : 'нет') + ' · режим: ' + displayMode() + ' · сеть: ' + (navigator.onLine ? 'есть' : 'нет') + ' · язык страницы: ' + LANG + ' · экран ' + screen.width + '×' + screen.height + ' · dpr ' + (window.devicePixelRatio||1),
+    'Автопроверки: wake=' + state.wake + ', speech=' + state.speech + ', voice=' + state.voice + ', audio=' + state.audio + ', pwa=' + state.pwa + ', offline=' + state.offline + ', audioSession=' + state.session,
     'Ответы: ' + (Object.keys(state.manual).length ? Object.entries(state.manual).map(([k,v]) => k + '=' + v).join(', ') : '—'),
     '---'
   ];
@@ -187,9 +217,9 @@ function renderLog(){
 }
 function pill(v){ return v === 'ok' ? `<span class="pill ok">${t('ok')}</span>` : v === 'bad' ? `<span class="pill bad">${t('bad')}</span>` : `<span class="pill wait">${t('unknown')}</span>`; }
 function renderChecks(){
-  const A = [['a_wake','wake'],['a_speech','speech'],['a_voice','voice'],['a_audio','audio'],['a_pwa','pwa'],['a_session','session']];
+  const A = [['a_wake','wake'],['a_speech','speech'],['a_voice','voice'],['a_audio','audio'],['a_pwa','pwa'],['a_offline','offline'],['a_session','session']];
   document.getElementById('auto').innerHTML = A.map(([l,k]) => `<div class="check"><span>${t(l)}</span>${pill(state[k])}</div>`).join('');
-  const M = ['m_screen','m_voice','m_beep1','m_beep2','m_silent','m_back','m_red'];
+  const M = ['m_screen','m_voice','m_beep1','m_beep2','m_silent','m_back','m_red','m_offline'];
   document.getElementById('manual').innerHTML = M.map(k => `<div class="check"><span>${t(k)}</span><div class="ask" role="group" aria-label="${t(k)}">
     <button type="button" data-q="${k}" data-v="yes" aria-pressed="${state.manual[k]==='yes'}">${t('yes')}</button>
     <button type="button" data-q="${k}" data-v="no" aria-pressed="${state.manual[k]==='no'}">${t('no')}</button></div></div>`).join('');
@@ -200,8 +230,30 @@ document.getElementById('manual').addEventListener('click', e => {
   state.manual[b.dataset.q] = b.dataset.v; log('Ответ: ' + b.dataset.q + ' = ' + b.dataset.v); renderChecks();
 });
 
-state.pwa = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone ? 'ok' : 'bad';
+state.pwa = (displayMode() === 'fullscreen' || displayMode() === 'standalone') ? 'ok' : 'bad';
 state.speech = 'speechSynthesis' in window ? 'ok' : 'bad';
+
+/* ---------- установка и офлайн ---------- */
+let installEvt = null;
+function renderInstall(){
+  const m = displayMode();
+  document.getElementById('installState').textContent = state.pwa === 'ok' ? t('inst_ok').replace('{m}', m) : inTelegram ? t('inst_tg') : t('inst_no');
+  document.getElementById('installBtn').hidden = !(installEvt && state.pwa !== 'ok');
+  document.getElementById('installHow').textContent = state.pwa === 'ok' || inTelegram ? '' : isIOS ? t('how_ios') : /Android/i.test(navigator.userAgent) ? t('how_android') : t('how_other');
+}
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; log('Установка: браузер предлагает установить'); renderInstall(); });
+window.addEventListener('appinstalled', () => { installEvt = null; log('Установка: приложение установлено — открой его со значка'); renderInstall(); });
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!installEvt) return;
+  try { installEvt.prompt(); const r = await installEvt.userChoice; log('Установка: ответ — ' + r.outcome); } catch(e){ log('Установка: ошибка — ' + e.message); }
+  installEvt = null; renderInstall();
+});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').then(() => log('Офлайн-кеш: зарегистрирован'), e => { state.offline = 'bad'; log('Офлайн-кеш: ошибка — ' + e.message); renderChecks(); });
+  navigator.serviceWorker.ready.then(() => { state.offline = 'ok'; log('Офлайн-кеш: готов' + (navigator.serviceWorker.controller ? ', страница из кеша доступна' : '')); renderChecks(); });
+} else { state.offline = 'bad'; }
+window.addEventListener('online', () => log('Сеть: появилась'));
+window.addEventListener('offline', () => log('Сеть: пропала'));
 
 /* ---------- звук ---------- */
 let ac = null;
@@ -324,14 +376,20 @@ document.addEventListener('visibilitychange', () => {
 });
 
 /* красный режим */
+// Полного экрана браузера (Fullscreen API) нет нарочно: Android показывает поверх него системную подсказку.
+// Без строки браузера страница открывается только установленной со значка (manifest: display fullscreen).
 const red = document.getElementById('red');
-document.getElementById('redBtn').addEventListener('click', async () => {
-  red.hidden = false; log('Красный режим: открыт');
-  try { if (document.documentElement.requestFullscreen) { await document.documentElement.requestFullscreen(); log('Полный экран: да'); } else log('Полный экран: не поддерживается'); }
-  catch(e){ log('Полный экран: отказ — ' + e.name); }
+const themeMeta = document.getElementById('themeColor');
+const themeNormal = themeMeta.getAttribute('content');
+document.getElementById('redBtn').addEventListener('click', () => {
+  red.hidden = false; themeMeta.setAttribute('content', '#000000'); document.documentElement.style.background = '#000';
+  log('Красный режим: открыт, режим отображения ' + displayMode() + (inTelegram ? ' (Telegram)' : ''));
   if (!wakeLock) requestWake();
 });
-document.getElementById('redExit').addEventListener('click', () => { red.hidden = true; try { document.fullscreenElement && document.exitFullscreen(); } catch(e){} log('Красный режим: закрыт'); });
+document.getElementById('redExit').addEventListener('click', () => {
+  red.hidden = true; themeMeta.setAttribute('content', themeNormal); document.documentElement.style.background = '';
+  log('Красный режим: закрыт');
+});
 
 /* язык и процесс */
 function applyLang(){
@@ -339,7 +397,7 @@ function applyLang(){
   document.querySelectorAll('[data-t]').forEach(el => { el.textContent = t(el.dataset.t); });
   document.getElementById('t-title').textContent = t('title'); document.getElementById('t-lead').textContent = t('lead'); document.getElementById('t-howto').textContent = t('howto');
   if (run && run.waiting) document.getElementById('start').textContent = t('poured');
-  pickVoice(); renderSteps(); renderChecks();
+  pickVoice(); renderSteps(); renderChecks(); renderInstall();
   if (run) { document.getElementById('stepName').textContent = t(steps[run.i].k); document.getElementById('rStep').textContent = t(steps[run.i].k); }
 }
 document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', () => { LANG = b.dataset.lang; document.querySelectorAll('[data-lang]').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false')); applyLang(); log('Язык: ' + LANG); }));
@@ -353,7 +411,7 @@ document.getElementById('copy').addEventListener('click', () => {
 });
 
 document.getElementById('cd').textContent = fmt(steps[0].dur); document.getElementById('stepName').textContent = t(steps[0].k);
-applyLang(); log('Страница открыта');
+applyLang(); log('Страница открыта, режим отображения ' + displayMode());
 })();
 </script>
 </body>
